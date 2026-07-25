@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/chat_message.dart';
+import '../../shared/models/source_ref.dart';
 import '../document/document_detail_screen.dart';
 import 'chat_controller.dart';
 import 'widgets/message_bubble.dart';
@@ -125,7 +126,9 @@ class _QuickTopicsState extends State<_QuickTopics> {
             child: ActionChip(
               label: Text(_topics[i]),
               labelStyle: const TextStyle(
-                  color: AppColors.primary, fontWeight: FontWeight.w600),
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
               backgroundColor: AppColors.chipBg,
               side: BorderSide.none,
               shape: RoundedRectangleBorder(
@@ -149,36 +152,48 @@ class _ChatHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(
-          16, MediaQuery.of(context).padding.top + 12, 16, 16),
+        16,
+        MediaQuery.of(context).padding.top + 12,
+        16,
+        16,
+      ),
       decoration: const BoxDecoration(gradient: AppColors.headerGradient),
       child: Row(
         children: [
           const CircleAvatar(
             radius: 22,
             backgroundColor: Colors.white,
-            child: Text('CTU',
-                style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12)),
+            child: Text(
+              'CTU',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Trợ lý sinh viên CTU',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 17)),
+                Text(
+                  'Trợ lý sinh viên CTU',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 17,
+                  ),
+                ),
                 SizedBox(height: 2),
                 Row(
                   children: [
                     Icon(Icons.circle, color: AppColors.online, size: 9),
                     SizedBox(width: 6),
-                    Text('Đang sẵn sàng hỗ trợ',
-                        style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    Text(
+                      'Đang sẵn sàng hỗ trợ',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
                   ],
                 ),
               ],
@@ -194,8 +209,11 @@ class _ChatHeader extends StatelessWidget {
                 value: 'new',
                 child: Row(
                   children: [
-                    Icon(Icons.add_comment_outlined,
-                        color: AppColors.primary, size: 20),
+                    Icon(
+                      Icons.add_comment_outlined,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
                     SizedBox(width: 10),
                     Text('Tạo đoạn chat mới'),
                   ],
@@ -214,14 +232,38 @@ class _MessageItem extends StatelessWidget {
 
   final ChatMessage message;
 
+  void _openDetail(BuildContext context, List<SourceRef> sources) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DocumentDetailScreen(sources: sources),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (message.isTyping) return const TypingIndicator();
+
+    final timeLabel = message.timeLabel;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         MessageBubble(text: message.text, isUser: message.isUser),
+        if (timeLabel != null) ...[
+          const SizedBox(height: 3),
+          Align(
+            alignment:
+                message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+            child: Text(
+              timeLabel,
+              style: TextStyle(
+                color: Theme.of(context).hintColor,
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
         if (message.sources.isNotEmpty) ...[
           const SizedBox(height: 12),
           const _SourcesHeader(),
@@ -229,16 +271,45 @@ class _MessageItem extends StatelessWidget {
           for (final source in message.sources)
             SourceCard(
               source: source,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      DocumentDetailScreen(documentKey: source.documentKey),
-                ),
-              ),
+              onTap: () => _openDetail(context, message.sources),
             ),
+          const SizedBox(height: 4),
+          _DocumentDetailButton(
+            onTap: () => _openDetail(context, message.sources),
+          ),
+        ] else if (message.fromSearch) ...[
+          const SizedBox(height: 8),
+          const _SearchedBadge(),
         ],
         const SizedBox(height: 4),
       ],
+    );
+  }
+}
+
+class _DocumentDetailButton extends StatelessWidget {
+  const _DocumentDetailButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        icon: const Icon(Icons.info_outline, size: 18),
+        label: const Text('Chi tiết tài liệu'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -252,11 +323,32 @@ class _SourcesHeader extends StatelessWidget {
       children: [
         Icon(Icons.menu_book_outlined, color: AppColors.primary, size: 20),
         SizedBox(width: 8),
-        Text('Nguồn tham khảo',
-            style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: 16)),
+        Text(
+          'Nguồn tham khảo',
+          style: TextStyle(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+            fontSize: 16,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SearchedBadge extends StatelessWidget {
+  const _SearchedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.travel_explore, color: Theme.of(context).hintColor, size: 16),
+        const SizedBox(width: 6),
+        Text(
+          'Đã tra cứu tài liệu nhưng không tìm thấy nguồn phù hợp',
+          style: TextStyle(color: Theme.of(context).hintColor, fontSize: 12),
+        ),
       ],
     );
   }
@@ -273,7 +365,11 @@ class _InputBar extends StatelessWidget {
     final theme = Theme.of(context);
     return Container(
       padding: EdgeInsets.fromLTRB(
-          12, 10, 12, MediaQuery.of(context).padding.bottom + 10),
+        12,
+        10,
+        12,
+        MediaQuery.of(context).padding.bottom + 10,
+      ),
       color: theme.scaffoldBackgroundColor,
       child: Row(
         children: [
@@ -288,12 +384,20 @@ class _InputBar extends StatelessWidget {
                 fillColor: theme.brightness == Brightness.dark
                     ? AppColors.cardDark
                     : Colors.grey.shade200,
-                prefixIcon: Icon(Icons.attach_file,
-                    color: theme.hintColor, size: 20),
-                suffixIcon: Icon(Icons.mic_none,
-                    color: theme.hintColor, size: 22),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                prefixIcon: Icon(
+                  Icons.attach_file,
+                  color: theme.hintColor,
+                  size: 20,
+                ),
+                suffixIcon: Icon(
+                  Icons.mic_none,
+                  color: theme.hintColor,
+                  size: 22,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 14,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(28),
                   borderSide: BorderSide.none,

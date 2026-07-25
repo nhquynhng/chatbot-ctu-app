@@ -7,7 +7,7 @@ void main() {
   testWidgets('Home screen renders', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: CtuApp()));
 
-    expect(find.text('CTU Student\nService'), findsOneWidget);
-    expect(find.text('Bắt đầu hỏi'), findsOneWidget);
+    expect(find.text('CTU Student Service'), findsOneWidget);
+    expect(find.text('Truy cập nhanh'), findsOneWidget);
   });
 }

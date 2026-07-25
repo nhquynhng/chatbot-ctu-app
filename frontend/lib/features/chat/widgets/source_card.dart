@@ -29,8 +29,11 @@ class SourceCard extends StatelessWidget {
                   color: AppColors.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.description_outlined,
-                    color: AppColors.primary, size: 22),
+                child: const Icon(
+                  Icons.description_outlined,
+                  color: AppColors.primary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -40,19 +43,25 @@ class SourceCard extends StatelessWidget {
                     Text(
                       source.title,
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 15),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       source.section,
                       style: const TextStyle(
-                          color: AppColors.primary, fontSize: 13),
+                        color: AppColors.primary,
+                        fontSize: 13,
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Trang ${source.page}',
-                      style: TextStyle(color: theme.hintColor, fontSize: 12),
-                    ),
+                    if (source.pageLabel.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        source.pageLabel,
+                        style: TextStyle(color: theme.hintColor, fontSize: 12),
+                      ),
+                    ],
                   ],
                 ),
               ),
