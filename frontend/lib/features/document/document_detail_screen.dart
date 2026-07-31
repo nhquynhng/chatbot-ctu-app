@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/source_ref.dart';
 import '../chat/data/rag_api_client.dart';
+import '../shell/app_state.dart';
 
 class DocumentDetailScreen extends StatelessWidget {
   const DocumentDetailScreen({
@@ -58,7 +60,7 @@ class DocumentDetailScreen extends StatelessWidget {
   }
 }
 
-class _DocumentCard extends StatelessWidget {
+class _DocumentCard extends ConsumerWidget {
   const _DocumentCard({
     required this.source,
   });
@@ -167,10 +169,21 @@ class _DocumentCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasAnyLink = source.hasSourceUrl ||
         source.hasSourceFile ||
         source.hasCanonicalMarkdown;
+    final sourceKey = source.documentKey.isNotEmpty
+        ? source.documentKey
+        : source.versionKey;
+    final savedDocuments = ref.watch(savedDocumentsProvider);
+    final isSaved = savedDocuments.any(
+      (saved) =>
+          (saved.documentKey.isNotEmpty
+              ? saved.documentKey
+              : saved.versionKey) ==
+          sourceKey,
+    );
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -179,25 +192,49 @@ class _DocumentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              source.title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 19,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    source.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 19,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: isSaved ? 'Bỏ lưu tài liệu' : 'Lưu tài liệu',
+                  icon: Icon(
+                    isSaved ? Icons.bookmark : Icons.bookmark_border,
+                    color: AppColors.primary,
+                  ),
+                  onPressed: () {
+                    ref.read(savedDocumentsProvider.notifier).state = isSaved
+                        ? [
+                            for (final saved in savedDocuments)
+                              if ((saved.documentKey.isNotEmpty
+                                      ? saved.documentKey
+                                      : saved.versionKey) !=
+                                  sourceKey)
+                                saved,
+                          ]
+                        : [...savedDocuments, source];
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isSaved
+                              ? 'Đã bỏ lưu tài liệu'
+                              : 'Đã lưu vào mục Tài liệu',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
             const Divider(height: 26),
-            _DetailRow(
-              icon: Icons.picture_as_pdf_outlined,
-              label: 'Tên file gốc',
-              value: source.sourceFileNameLabel,
-            ),
-            if (source.hasCanonicalMarkdown)
-              _DetailRow(
-                icon: Icons.article_outlined,
-                label: 'Tên file OCR',
-                value: source.canonicalMarkdownFileNameLabel,
-              ),
             _DetailRow(
               icon: Icons.event_outlined,
               label: 'Ngày ban hành',

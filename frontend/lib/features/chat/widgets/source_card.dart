@@ -47,16 +47,8 @@ class SourceCard extends StatelessWidget {
                         fontSize: 15,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      source.section,
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 13,
-                      ),
-                    ),
                     if (source.pageLabel.isNotEmpty) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 4),
                       Text(
                         source.pageLabel,
                         style: TextStyle(color: theme.hintColor, fontSize: 12),

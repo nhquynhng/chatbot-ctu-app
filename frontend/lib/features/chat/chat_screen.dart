@@ -157,19 +157,15 @@ class _ChatHeader extends StatelessWidget {
         16,
         16,
       ),
-      decoration: const BoxDecoration(gradient: AppColors.headerGradient),
+      decoration: const BoxDecoration(color: AppColors.primary),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius: 22,
-            backgroundColor: Colors.white,
-            child: Text(
-              'CTU',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              ),
+          ClipOval(
+            child: Image.asset(
+              'icon-ctu.png',
+              width: 44,
+              height: 44,
+              fit: BoxFit.cover,
             ),
           ),
           const SizedBox(width: 12),
@@ -381,9 +377,7 @@ class _InputBar extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Nhập câu hỏi của bạn...',
                 filled: true,
-                fillColor: theme.brightness == Brightness.dark
-                    ? AppColors.cardDark
-                    : Colors.grey.shade200,
+                fillColor: AppColors.accentLight,
                 prefixIcon: Icon(
                   Icons.attach_file,
                   color: theme.hintColor,
