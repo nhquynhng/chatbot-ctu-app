@@ -47,6 +47,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final messages = ref.watch(chatControllerProvider);
+    final isSending = messages.any((message) => message.isTyping);
     ref.listen(chatControllerProvider, (_, _) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     });
@@ -75,7 +76,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _send();
               },
             ),
-          _InputBar(controller: _inputController, onSend: _send),
+          _InputBar(
+            controller: _inputController,
+            onSend: _send,
+            enabled: !isSending,
+          ),
         ],
       ),
     );
@@ -230,9 +235,7 @@ class _MessageItem extends StatelessWidget {
 
   void _openDetail(BuildContext context, List<SourceRef> sources) {
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => DocumentDetailScreen(sources: sources),
-      ),
+      MaterialPageRoute(builder: (_) => DocumentDetailScreen(sources: sources)),
     );
   }
 
@@ -249,8 +252,9 @@ class _MessageItem extends StatelessWidget {
         if (timeLabel != null) ...[
           const SizedBox(height: 3),
           Align(
-            alignment:
-                message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+            alignment: message.isUser
+                ? Alignment.centerRight
+                : Alignment.centerLeft,
             child: Text(
               timeLabel,
               style: TextStyle(
@@ -339,7 +343,11 @@ class _SearchedBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(Icons.travel_explore, color: Theme.of(context).hintColor, size: 16),
+        Icon(
+          Icons.travel_explore,
+          color: Theme.of(context).hintColor,
+          size: 16,
+        ),
         const SizedBox(width: 6),
         Text(
           'Đã tra cứu tài liệu nhưng không tìm thấy nguồn phù hợp',
@@ -351,10 +359,15 @@ class _SearchedBadge extends StatelessWidget {
 }
 
 class _InputBar extends StatelessWidget {
-  const _InputBar({required this.controller, required this.onSend});
+  const _InputBar({
+    required this.controller,
+    required this.onSend,
+    required this.enabled,
+  });
 
   final TextEditingController controller;
   final VoidCallback onSend;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -372,22 +385,15 @@ class _InputBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              enabled: enabled,
+              maxLength: 2000,
               textInputAction: TextInputAction.send,
-              onSubmitted: (_) => onSend(),
+              onSubmitted: enabled ? (_) => onSend() : null,
               decoration: InputDecoration(
                 hintText: 'Nhập câu hỏi của bạn...',
+                counterText: '',
                 filled: true,
                 fillColor: AppColors.accentLight,
-                prefixIcon: Icon(
-                  Icons.attach_file,
-                  color: theme.hintColor,
-                  size: 20,
-                ),
-                suffixIcon: Icon(
-                  Icons.mic_none,
-                  color: theme.hintColor,
-                  size: 22,
-                ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 14,
@@ -401,11 +407,11 @@ class _InputBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Material(
-            color: AppColors.primary,
+            color: enabled ? AppColors.primary : theme.disabledColor,
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
-              onTap: onSend,
+              onTap: enabled ? onSend : null,
               child: const Padding(
                 padding: EdgeInsets.all(14),
                 child: Icon(Icons.send, color: Colors.white),

@@ -11,6 +11,7 @@ class RagAnswer {
     required this.answer,
     required this.sources,
     required this.shouldSearch,
+    this.recentTopic,
   });
 
   final String answer;
@@ -18,6 +19,7 @@ class RagAnswer {
 
   /// `false` khi backend trả lời trực tiếp mà không tra cứu tài liệu.
   final bool shouldSearch;
+  final String? recentTopic;
 
   factory RagAnswer.fromJson(Map<String, dynamic> json) {
     final citations = json['citations'] as List<dynamic>? ?? const [];
@@ -29,6 +31,7 @@ class RagAnswer {
           .map(SourceRef.fromCitationJson)
           .toList(growable: false),
       shouldSearch: json['should_search'] as bool? ?? true,
+      recentTopic: json['recent_topic'] as String?,
     );
   }
 }
@@ -98,10 +101,9 @@ class RagApiClient {
   Future<RagAnswer> answer(
     String question, {
     int topK = 5,
+    String? recentTopic,
   }) async {
-    final uri = Uri.parse(
-      '${ApiConfig.baseUrl}/api/v1/rag/answer',
-    );
+    final uri = Uri.parse('${ApiConfig.baseUrl}/api/v1/rag/answer');
 
     final client = _client ?? http.Client();
 
@@ -109,12 +111,12 @@ class RagApiClient {
       final response = await client
           .post(
             uri,
-            headers: const {
-              'Content-Type': 'application/json',
-            },
+            headers: const {'Content-Type': 'application/json'},
             body: jsonEncode({
               'question': question,
               'top_k': topK,
+              if (recentTopic != null && recentTopic.trim().isNotEmpty)
+                'recent_topic': recentTopic.trim(),
             }),
           )
           .timeout(const Duration(seconds: 90));
@@ -123,27 +125,20 @@ class RagApiClient {
         throw RagApiException(
           _extractErrorMessage(
             response,
-            fallback:
-                'Backend trả về lỗi HTTP ${response.statusCode}.',
+            fallback: 'Backend trả về lỗi HTTP ${response.statusCode}.',
           ),
         );
       }
 
-      final decoded = jsonDecode(
-        utf8.decode(response.bodyBytes),
-      );
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
 
       if (decoded is! Map<String, dynamic>) {
-        throw const RagApiException(
-          'Phản hồi backend không đúng định dạng.',
-        );
+        throw const RagApiException('Phản hồi backend không đúng định dạng.');
       }
 
       return RagAnswer.fromJson(decoded);
     } on TimeoutException {
-      throw const RagApiException(
-        'Backend phản hồi quá thời gian cho phép.',
-      );
+      throw const RagApiException('Backend phản hồi quá thời gian cho phép.');
     } on RagApiException {
       rethrow;
     } catch (_) {
@@ -158,9 +153,7 @@ class RagApiClient {
   }
 
   /// Lấy URL tạm thời để xem PDF hoặc file nguồn gốc.
-  Future<DocumentPreviewUrl> getSourcePreviewUrl(
-    String versionKey,
-  ) {
+  Future<DocumentPreviewUrl> getSourcePreviewUrl(String versionKey) {
     return getDocumentPreviewUrl(
       versionKey: versionKey,
       fileType: DocumentPreviewType.source,
@@ -168,9 +161,7 @@ class RagApiClient {
   }
 
   /// Lấy URL tạm thời để xem file Markdown OCR.
-  Future<DocumentPreviewUrl> getCanonicalMarkdownPreviewUrl(
-    String versionKey,
-  ) {
+  Future<DocumentPreviewUrl> getCanonicalMarkdownPreviewUrl(String versionKey) {
     return getDocumentPreviewUrl(
       versionKey: versionKey,
       fileType: DocumentPreviewType.canonicalMarkdown,
@@ -184,19 +175,13 @@ class RagApiClient {
     final normalizedVersionKey = versionKey.trim();
 
     if (normalizedVersionKey.isEmpty) {
-      throw const RagApiException(
-        'Không có mã phiên bản tài liệu.',
-      );
+      throw const RagApiException('Không có mã phiên bản tài liệu.');
     }
 
     final uri = Uri.parse(
       '${ApiConfig.baseUrl}/api/v1/versions/preview-url/'
       '${Uri.encodeComponent(normalizedVersionKey)}',
-    ).replace(
-      queryParameters: {
-        'file_type': fileType.apiValue,
-      },
-    );
+    ).replace(queryParameters: {'file_type': fileType.apiValue});
 
     final client = _client ?? http.Client();
 
@@ -216,9 +201,7 @@ class RagApiClient {
         );
       }
 
-      final decoded = jsonDecode(
-        utf8.decode(response.bodyBytes),
-      );
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
 
       if (decoded is! Map<String, dynamic>) {
         throw const RagApiException(
@@ -228,9 +211,7 @@ class RagApiClient {
 
       return DocumentPreviewUrl.fromJson(decoded);
     } on TimeoutException {
-      throw const RagApiException(
-        'Quá thời gian lấy đường dẫn tài liệu.',
-      );
+      throw const RagApiException('Quá thời gian lấy đường dẫn tài liệu.');
     } on RagApiException {
       rethrow;
     } catch (_) {
@@ -249,15 +230,28 @@ class RagApiClient {
     required String fallback,
   }) {
     try {
-      final decoded = jsonDecode(
-        utf8.decode(response.bodyBytes),
-      );
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
 
       if (decoded is Map<String, dynamic>) {
         final detail = decoded['detail'];
 
         if (detail is String && detail.trim().isNotEmpty) {
           return detail.trim();
+        }
+
+        if (detail is List) {
+          final messages = detail
+              .whereType<Map<String, dynamic>>()
+              .map((item) => item['msg'])
+              .whereType<String>()
+              .map((message) => message.trim())
+              .where((message) => message.isNotEmpty)
+              .toSet()
+              .toList(growable: false);
+
+          if (messages.isNotEmpty) {
+            return messages.join('\n');
+          }
         }
       }
     } catch (_) {

@@ -15,15 +15,24 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
   final RagApiClient _apiClient;
 
   int _counter = 0;
+  int _generation = 0;
+  bool _isSending = false;
+  String? _recentTopic;
 
   void newChat() {
+    _generation++;
     _counter = 0;
+    _isSending = false;
+    _recentTopic = null;
     state = const [_welcomeMessage];
   }
 
   Future<void> send(String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty || _isSending) return;
+
+    _isSending = true;
+    final requestGeneration = _generation;
 
     final userId = 'u${_counter++}';
     state = [
@@ -43,7 +52,13 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
     ];
 
     try {
-      final response = await _apiClient.answer(trimmed);
+      final response = await _apiClient.answer(
+        trimmed,
+        recentTopic: _recentTopic,
+      );
+      if (requestGeneration != _generation) return;
+
+      _recentTopic = response.recentTopic ?? _recentTopic;
       state = [
         for (final m in state)
           if (m.id != typingId) m,
@@ -57,6 +72,8 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
         ),
       ];
     } on RagApiException catch (error) {
+      if (requestGeneration != _generation) return;
+
       state = [
         for (final m in state)
           if (m.id != typingId) m,
@@ -67,6 +84,10 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
           sentAt: DateTime.now(),
         ),
       ];
+    } finally {
+      if (requestGeneration == _generation) {
+        _isSending = false;
+      }
     }
   }
 }
