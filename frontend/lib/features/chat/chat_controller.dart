@@ -16,18 +16,25 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
 
   int _counter = 0;
   int? _activeRequestId;
+  int _generation = 0;
+  bool _isSending = false;
+  String? _recentTopic;
 
-  bool get isResponding => _activeRequestId != null;
+  bool get isResponding => _isSending;
 
   void newChat() {
     stopResponse();
+    _generation++;
     _counter = 0;
+    _recentTopic = null;
     state = const [_welcomeMessage];
   }
 
   void stopResponse() {
-    if (_activeRequestId == null) return;
+    if (!_isSending) return;
 
+    _generation++;
+    _isSending = false;
     _activeRequestId = null;
     _apiClient.cancelActiveAnswer();
     state = [for (final message in state) if (!message.isTyping) message];
@@ -35,7 +42,10 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
 
   Future<void> send(String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || isResponding) return;
+    if (trimmed.isEmpty || _isSending) return;
+
+    _isSending = true;
+    final requestGeneration = _generation;
 
     final userId = 'u${_counter++}';
     state = [
@@ -58,9 +68,17 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
     _activeRequestId = requestId;
 
     try {
-      final response = await _apiClient.answer(trimmed);
-      if (_activeRequestId != requestId) return;
+      final response = await _apiClient.answer(
+        trimmed,
+        recentTopic: _recentTopic,
+      );
+      if (requestGeneration != _generation || _activeRequestId != requestId) {
+        return;
+      }
+
       _activeRequestId = null;
+      _isSending = false;
+      _recentTopic = response.recentTopic ?? _recentTopic;
       state = [
         for (final m in state)
           if (m.id != typingId) m,
@@ -74,8 +92,12 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
         ),
       ];
     } on RagApiException catch (error) {
-      if (_activeRequestId != requestId) return;
+      if (requestGeneration != _generation || _activeRequestId != requestId) {
+        return;
+      }
+
       _activeRequestId = null;
+      _isSending = false;
       state = [
         for (final m in state)
           if (m.id != typingId) m,
@@ -86,6 +108,11 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
           sentAt: DateTime.now(),
         ),
       ];
+    } finally {
+      if (requestGeneration == _generation && _activeRequestId == requestId) {
+        _activeRequestId = null;
+        _isSending = false;
+      }
     }
   }
 }

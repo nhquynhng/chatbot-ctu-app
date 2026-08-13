@@ -19,6 +19,7 @@ void main() {
         jsonEncode({
           'answer': 'Bạn thực hiện theo hướng dẫn.',
           'should_search': true,
+          'recent_topic': 'cách xin giấy xác nhận',
           'citations': [
             {
               'document_key': 'QT-SV-001',
@@ -46,6 +47,7 @@ void main() {
     ).answer('Cách xin giấy xác nhận?');
 
     expect(result.answer, 'Bạn thực hiện theo hướng dẫn.');
+    expect(result.recentTopic, 'cách xin giấy xác nhận');
     expect(result.sources, hasLength(1));
     final source = result.sources.single;
     expect(source.documentKey, 'QT-SV-001');
@@ -58,6 +60,33 @@ void main() {
     expect(source.issuedDateLabel, '14/08/2020');
     expect(source.issuingAuthorityLabel, 'Phòng Công tác Sinh viên');
     expect(source.documentTypeLabel, 'Quyết định');
+  });
+
+  test('sends recent topic with a follow-up question', () async {
+    final client = MockClient((request) async {
+      expect(jsonDecode(request.body), {
+        'question': 'Hồ sơ gồm gì?',
+        'top_k': 5,
+        'recent_topic': 'miễn học phí',
+      });
+
+      return http.Response(
+        jsonEncode({
+          'answer': 'Hồ sơ gồm...',
+          'should_search': true,
+          'recent_topic': 'hồ sơ gồm gì cho miễn học phí',
+          'citations': [],
+        }),
+        200,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+
+    final result = await RagApiClient(
+      client: client,
+    ).answer('Hồ sơ gồm gì?', recentTopic: 'miễn học phí');
+
+    expect(result.recentTopic, 'hồ sơ gồm gì cho miễn học phí');
   });
 
   test('shows "Chưa cập nhật" when document metadata is missing', () async {
@@ -89,5 +118,33 @@ void main() {
     expect(source.issuedDateLabel, 'Chưa cập nhật');
     expect(source.issuingAuthorityLabel, 'Chưa cập nhật');
     expect(source.documentTypeLabel, 'Chưa cập nhật');
+  });
+
+  test('extracts FastAPI validation messages', () async {
+    final client = MockClient((request) async {
+      return http.Response(
+        jsonEncode({
+          'detail': [
+            {
+              'loc': ['body', 'question'],
+              'msg': 'String should have at most 2000 characters',
+            },
+          ],
+        }),
+        422,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      );
+    });
+
+    expect(
+      () => RagApiClient(client: client).answer('Câu hỏi quá dài'),
+      throwsA(
+        isA<RagApiException>().having(
+          (error) => error.message,
+          'message',
+          'String should have at most 2000 characters',
+        ),
+      ),
+    );
   });
 }
