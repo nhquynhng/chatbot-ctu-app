@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../shared/models/chat_message.dart';
@@ -20,19 +24,104 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _inputController = TextEditingController();
   final _scrollController = ScrollController();
+  final _speech = SpeechToText();
+
+  bool _speechInitialized = false;
+  bool _isListening = false;
+  String _textBeforeListening = '';
 
   @override
   void dispose() {
+    unawaited(_speech.cancel());
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   void _send() {
+    if (_speech.isListening) {
+      unawaited(_stopListening());
+      return;
+    }
     final text = _inputController.text;
     if (text.trim().isEmpty) return;
     _inputController.clear();
     ref.read(chatControllerProvider.notifier).send(text);
+  }
+
+  Future<void> _stopListening() async {
+    await _speech.stop();
+    if (mounted) setState(() => _isListening = false);
+  }
+
+  Future<void> _toggleListening() async {
+    if (_speech.isListening) {
+      await _stopListening();
+      return;
+    }
+
+    if (!_speechInitialized) {
+      _speechInitialized = await _speech.initialize(
+        onStatus: _onSpeechStatus,
+        onError: (error) {
+          if (!mounted) return;
+          setState(() => _isListening = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Không thể nhận dạng giọng nói: ${error.errorMsg}'),
+            ),
+          );
+        },
+      );
+    }
+
+    if (!_speechInitialized) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thiết bị chưa hỗ trợ hoặc chưa cấp quyền micro.'),
+        ),
+      );
+      return;
+    }
+
+    final locales = await _speech.locales();
+    String? vietnameseLocale;
+    for (final locale in locales) {
+      if (locale.localeId.toLowerCase().startsWith('vi')) {
+        vietnameseLocale = locale.localeId;
+        break;
+      }
+    }
+
+    _textBeforeListening = _inputController.text.trimRight();
+    await _speech.listen(
+      onResult: _onSpeechResult,
+      listenOptions: SpeechListenOptions(
+        localeId: vietnameseLocale,
+        partialResults: true,
+        cancelOnError: true,
+        listenMode: ListenMode.dictation,
+      ),
+    );
+    if (mounted) setState(() => _isListening = _speech.isListening);
+  }
+
+  void _onSpeechResult(SpeechRecognitionResult result) {
+    final recognized = result.recognizedWords.trim();
+    final separator = _textBeforeListening.isEmpty || recognized.isEmpty
+        ? ''
+        : ' ';
+    final text = '$_textBeforeListening$separator$recognized';
+    _inputController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
+  void _onSpeechStatus(String _) {
+    if (!mounted) return;
+    setState(() => _isListening = _speech.isListening);
   }
 
   void _scrollToBottom() {
@@ -79,7 +168,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           _InputBar(
             controller: _inputController,
             onSend: _send,
+            onMicPressed: _toggleListening,
             enabled: !isSending,
+            isListening: _isListening,
           ),
         ],
       ),
@@ -362,12 +453,16 @@ class _InputBar extends StatelessWidget {
   const _InputBar({
     required this.controller,
     required this.onSend,
+    required this.onMicPressed,
     required this.enabled,
+    required this.isListening,
   });
 
   final TextEditingController controller;
   final VoidCallback onSend;
+  final VoidCallback onMicPressed;
   final bool enabled;
+  final bool isListening;
 
   @override
   Widget build(BuildContext context) {
@@ -390,8 +485,18 @@ class _InputBar extends StatelessWidget {
               textInputAction: TextInputAction.send,
               onSubmitted: enabled ? (_) => onSend() : null,
               decoration: InputDecoration(
-                hintText: 'Nhập câu hỏi của bạn...',
+                hintText: isListening
+                    ? 'Đang nghe… Hãy nói câu hỏi'
+                    : 'Nhập câu hỏi của bạn...',
                 counterText: '',
+                suffixIcon: IconButton(
+                  tooltip: isListening ? 'Dừng nghe' : 'Nhập bằng giọng nói',
+                  onPressed: enabled ? onMicPressed : null,
+                  icon: Icon(
+                    isListening ? Icons.mic : Icons.mic_none,
+                    color: isListening ? Colors.red : AppColors.primary,
+                  ),
+                ),
                 filled: true,
                 fillColor: AppColors.accentLight,
                 contentPadding: const EdgeInsets.symmetric(
