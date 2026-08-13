@@ -15,15 +15,27 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
   final RagApiClient _apiClient;
 
   int _counter = 0;
+  int? _activeRequestId;
+
+  bool get isResponding => _activeRequestId != null;
 
   void newChat() {
+    stopResponse();
     _counter = 0;
     state = const [_welcomeMessage];
   }
 
+  void stopResponse() {
+    if (_activeRequestId == null) return;
+
+    _activeRequestId = null;
+    _apiClient.cancelActiveAnswer();
+    state = [for (final message in state) if (!message.isTyping) message];
+  }
+
   Future<void> send(String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty || isResponding) return;
 
     final userId = 'u${_counter++}';
     state = [
@@ -42,8 +54,13 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
       ChatMessage(id: typingId, isUser: false, isTyping: true),
     ];
 
+    final requestId = _counter++;
+    _activeRequestId = requestId;
+
     try {
       final response = await _apiClient.answer(trimmed);
+      if (_activeRequestId != requestId) return;
+      _activeRequestId = null;
       state = [
         for (final m in state)
           if (m.id != typingId) m,
@@ -57,6 +74,8 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
         ),
       ];
     } on RagApiException catch (error) {
+      if (_activeRequestId != requestId) return;
+      _activeRequestId = null;
       state = [
         for (final m in state)
           if (m.id != typingId) m,

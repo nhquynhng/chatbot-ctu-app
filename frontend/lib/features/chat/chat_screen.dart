@@ -35,6 +35,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ref.read(chatControllerProvider.notifier).send(text);
   }
 
+  void _sendOrStop() {
+    final controller = ref.read(chatControllerProvider.notifier);
+    if (controller.isResponding) {
+      controller.stopResponse();
+      return;
+    }
+    _send();
+  }
+
   void _scrollToBottom() {
     if (!_scrollController.hasClients) return;
     _scrollController.animateTo(
@@ -75,7 +84,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _send();
               },
             ),
-          _InputBar(controller: _inputController, onSend: _send),
+          _InputBar(
+            controller: _inputController,
+            isResponding: ref.read(chatControllerProvider.notifier).isResponding,
+            onSendOrStop: _sendOrStop,
+          ),
         ],
       ),
     );
@@ -351,10 +364,15 @@ class _SearchedBadge extends StatelessWidget {
 }
 
 class _InputBar extends StatelessWidget {
-  const _InputBar({required this.controller, required this.onSend});
+  const _InputBar({
+    required this.controller,
+    required this.isResponding,
+    required this.onSendOrStop,
+  });
 
   final TextEditingController controller;
-  final VoidCallback onSend;
+  final bool isResponding;
+  final VoidCallback onSendOrStop;
 
   @override
   Widget build(BuildContext context) {
@@ -373,7 +391,7 @@ class _InputBar extends StatelessWidget {
             child: TextField(
               controller: controller,
               textInputAction: TextInputAction.send,
-              onSubmitted: (_) => onSend(),
+              onSubmitted: (_) => onSendOrStop(),
               decoration: InputDecoration(
                 hintText: 'Nhập câu hỏi của bạn...',
                 filled: true,
@@ -405,10 +423,13 @@ class _InputBar extends StatelessWidget {
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
-              onTap: onSend,
-              child: const Padding(
+              onTap: onSendOrStop,
+              child: Padding(
                 padding: EdgeInsets.all(14),
-                child: Icon(Icons.send, color: Colors.white),
+                child: Icon(
+                  isResponding ? Icons.pause : Icons.send,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),

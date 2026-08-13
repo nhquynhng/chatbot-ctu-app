@@ -94,6 +94,13 @@ class RagApiClient {
   RagApiClient({http.Client? client}) : _client = client;
 
   final http.Client? _client;
+  http.Client? _activeAnswerClient;
+
+  /// Hủy yêu cầu trả lời đang chạy. Lần gọi sau sẽ tạo kết nối mới.
+  void cancelActiveAnswer() {
+    _activeAnswerClient?.close();
+    _activeAnswerClient = null;
+  }
 
   Future<RagAnswer> answer(
     String question, {
@@ -104,6 +111,9 @@ class RagApiClient {
     );
 
     final client = _client ?? http.Client();
+    if (_client == null) {
+      _activeAnswerClient = client;
+    }
 
     try {
       final response = await client
@@ -153,6 +163,9 @@ class RagApiClient {
     } finally {
       if (_client == null) {
         client.close();
+        if (identical(_activeAnswerClient, client)) {
+          _activeAnswerClient = null;
+        }
       }
     }
   }

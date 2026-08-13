@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio" version="26.0.0">
+  <diagram name="CTU Client-Server Architecture" id="arch">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ==================== CLIENT TIER ==================== -->
+        <mxCell id="2" value="CLIENT" style="swimlane;startSize=35;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=14;html=1;rounded=1;shadow=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="250" y="20" width="800" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="Flutter App (Mobile, Web)" style="text;html=1;align=right;verticalAlign=middle;fillColor=none;strokeColor=none;fontColor=#6c8ebf;fontSize=11;fontStyle=2;" vertex="1" parent="2">
+          <mxGeometry x="470" y="5" width="310" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="Trang ch&#x1ee7;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;arcSize=20;" vertex="1" parent="2">
+          <mxGeometry x="55" y="55" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="Chat (RAG)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;arcSize=20;" vertex="1" parent="2">
+          <mxGeometry x="300" y="55" width="200" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="T&#xe0;i li&#x1ec7;u" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;arcSize=20;" vertex="1" parent="2">
+          <mxGeometry x="545" y="55" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== SERVER TIER ==================== -->
+        <mxCell id="10" value="SERVER &#x2014; FastAPI" style="swimlane;startSize=35;fillColor=#f0f4f8;strokeColor=#4a6785;fontStyle=1;fontSize=14;html=1;rounded=1;shadow=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="290" width="1200" height="550" as="geometry" />
+        </mxCell>
+
+        <!-- API Layer -->
+        <mxCell id="11" value="API Layer (v1)" style="swimlane;startSize=25;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=12;html=1;rounded=1;" vertex="1" parent="10">
+          <mxGeometry x="50" y="50" width="1100" height="115" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="Health API&#xa;/health" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="11">
+          <mxGeometry x="40" y="35" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="RAG API&#xa;POST /rag/answer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="11">
+          <mxGeometry x="350" y="35" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="Documents API&#xa;GET /documents/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="11">
+          <mxGeometry x="720" y="35" width="260" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Service Layer -->
+        <mxCell id="20" value="Service Layer" style="swimlane;startSize=25;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;html=1;rounded=1;" vertex="1" parent="10">
+          <mxGeometry x="150" y="205" width="900" height="115" as="geometry" />
+        </mxCell>
+        <mxCell id="21" value="RAG Service&#xa;(answer_question)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="20">
+          <mxGeometry x="60" y="35" width="300" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="22" value="Document Service&#xa;(list, detail, download)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="20">
+          <mxGeometry x="520" y="35" width="300" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Core Components -->
+        <mxCell id="30" value="Core Components" style="swimlane;startSize=25;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;html=1;rounded=1;" vertex="1" parent="10">
+          <mxGeometry x="100" y="370" width="1000" height="115" as="geometry" />
+        </mxCell>
+        <mxCell id="31" value="Embedder&#xa;(NVIDIA BGE-M3)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="30">
+          <mxGeometry x="40" y="35" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="32" value="Retriever&#xa;(Vector Search)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="30">
+          <mxGeometry x="380" y="35" width="240" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="33" value="LLM Generator&#xa;(ChatNVIDIA)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="30">
+          <mxGeometry x="720" y="35" width="240" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== DATA LAYER ==================== -->
+        <mxCell id="40" value="DATA LAYER" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=14;html=1;rounded=1;shadow=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="920" width="550" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="41" value="PostgreSQL&#xa;(Metadata DB)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82b366;fontSize=11;fontStyle=1;size=15;boundedLbl=1;" vertex="1" parent="40">
+          <mxGeometry x="40" y="45" width="200" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="42" value="Qdrant&#xa;(Vector DB)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#82b366;fontSize=11;fontStyle=1;size=15;boundedLbl=1;" vertex="1" parent="40">
+          <mxGeometry x="310" y="45" width="190" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== EXTERNAL SERVICES ==================== -->
+        <mxCell id="50" value="EXTERNAL SERVICES" style="swimlane;startSize=30;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=14;html=1;rounded=1;shadow=1;dashed=1;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="700" y="920" width="550" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="51" value="NVIDIA AI Endpoints&#xa;(Embedding + LLM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#666666;fontSize=11;fontStyle=1;dashed=1;" vertex="1" parent="50">
+          <mxGeometry x="80" y="45" width="380" height="95" as="geometry" />
+        </mxCell>
+
+        <!-- ==================== EDGES ==================== -->
+
+        <!-- Client -> Server: HTTP/REST -->
+        <mxCell id="60" value="HTTP / REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;fontSize=11;fontStyle=1;strokeWidth=2;strokeColor=#4a6785;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="2" target="10">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RAG API -> RAG Service -->
+        <mxCell id="61" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673a6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.4;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="13" target="21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Documents API -> Document Service -->
+        <mxCell id="62" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#9673a6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="14" target="22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RAG Service -> Embedder -->
+        <mxCell id="63" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;exitX=0.25;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="21" target="31">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RAG Service -> Retriever -->
+        <mxCell id="64" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="21" target="32">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RAG Service -> LLM Generator -->
+        <mxCell id="65" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6c8ebf;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="21" target="33">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Document Service -> PostgreSQL -->
+        <mxCell id="66" value="SQLAlchemy" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;fontSize=10;labelBackgroundColor=#ffffff;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="22" target="41">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- RAG Service -> PostgreSQL (fetch assets) -->
+        <mxCell id="67" value="Fetch Assets" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;fontSize=10;dashed=1;labelBackgroundColor=#ffffff;exitX=0.1;exitY=1;exitDx=0;exitDy=0;entryX=0.35;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="21" target="41">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Embedder -> NVIDIA API -->
+        <mxCell id="68" value="Embedding API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;fontSize=10;dashed=1;labelBackgroundColor=#ffffff;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.3;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="31" target="51">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- LLM Generator -> NVIDIA API -->
+        <mxCell id="69" value="Chat API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;fontSize=10;dashed=1;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="33" target="51">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Retriever -> Qdrant -->
+        <mxCell id="70" value="Vector Search" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;fontSize=10;labelBackgroundColor=#ffffff;exitX=0.3;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="32" target="42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
