@@ -18,7 +18,7 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
   int? _activeRequestId;
   int _generation = 0;
   bool _isSending = false;
-  String? _recentTopic;
+  ConversationContext? _conversationContext;
 
   bool get isResponding => _isSending;
 
@@ -26,7 +26,7 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
     stopResponse();
     _generation++;
     _counter = 0;
-    _recentTopic = null;
+    _conversationContext = null;
     state = const [_welcomeMessage];
   }
 
@@ -70,7 +70,7 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
     try {
       final response = await _apiClient.answer(
         trimmed,
-        recentTopic: _recentTopic,
+        conversationContext: _conversationContext,
       );
       if (requestGeneration != _generation || _activeRequestId != requestId) {
         return;
@@ -78,7 +78,7 @@ class ChatController extends StateNotifier<List<ChatMessage>> {
 
       _activeRequestId = null;
       _isSending = false;
-      _recentTopic = response.recentTopic ?? _recentTopic;
+      _conversationContext = response.conversationContext ?? _conversationContext;
       state = [
         for (final m in state)
           if (m.id != typingId) m,

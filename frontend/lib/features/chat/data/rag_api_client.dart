@@ -11,7 +11,7 @@ class RagAnswer {
     required this.answer,
     required this.sources,
     required this.shouldSearch,
-    this.recentTopic,
+    this.conversationContext,
   });
 
   final String answer;
@@ -19,7 +19,7 @@ class RagAnswer {
 
   /// `false` khi backend trả lời trực tiếp mà không tra cứu tài liệu.
   final bool shouldSearch;
-  final String? recentTopic;
+  final ConversationContext? conversationContext;
 
   factory RagAnswer.fromJson(Map<String, dynamic> json) {
     final citations = json['citations'] as List<dynamic>? ?? const [];
@@ -31,8 +31,70 @@ class RagAnswer {
           .map(SourceRef.fromCitationJson)
           .toList(growable: false),
       shouldSearch: json['should_search'] as bool? ?? true,
-      recentTopic: json['recent_topic'] as String?,
+      conversationContext: ConversationContext.tryFromResponseJson(json),
     );
+  }
+}
+
+class ConversationContext {
+  const ConversationContext({
+    this.recentTopic,
+    this.documentKey,
+    this.versionKey,
+    this.usedChunkKeys = const [],
+  });
+
+  final String? recentTopic;
+  final String? documentKey;
+  final String? versionKey;
+  final List<String> usedChunkKeys;
+
+  static ConversationContext? tryFromResponseJson(Map<String, dynamic> json) {
+    final context = json['conversation_context'];
+    final values = context is Map<String, dynamic>
+        ? context
+        : <String, dynamic>{
+            'recent_topic': json['recent_topic'],
+          };
+    final rawChunkKeys = values['used_chunk_keys'];
+
+    final recentTopic = _emptyToNull(values['recent_topic']);
+    final documentKey = _emptyToNull(values['document_key']);
+    final versionKey = _emptyToNull(values['version_key']);
+    final usedChunkKeys = rawChunkKeys is List
+        ? rawChunkKeys.whereType<String>().toList(growable: false)
+        : const <String>[];
+
+    if (recentTopic == null && documentKey == null && versionKey == null) {
+      return null;
+    }
+
+    return ConversationContext(
+      recentTopic: recentTopic,
+      documentKey: documentKey,
+      versionKey: versionKey,
+      usedChunkKeys: usedChunkKeys,
+    );
+  }
+
+  Map<String, dynamic>? toRequestJson() {
+    if (recentTopic == null && documentKey == null && versionKey == null) {
+      return null;
+    }
+
+    return {
+      if (recentTopic != null) 'recent_topic': recentTopic,
+      if (documentKey != null) 'document_key': documentKey,
+      if (versionKey != null) 'version_key': versionKey,
+      if (usedChunkKeys.isNotEmpty) 'used_chunk_keys': usedChunkKeys,
+    };
+  }
+
+  static String? _emptyToNull(dynamic value) {
+    if (value is! String) return null;
+
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 }
 
@@ -108,7 +170,7 @@ class RagApiClient {
   Future<RagAnswer> answer(
     String question, {
     int topK = 5,
-    String? recentTopic,
+    ConversationContext? conversationContext,
   }) async {
     final uri = Uri.parse('${ApiConfig.baseUrl}/api/v1/rag/answer');
 
@@ -125,8 +187,8 @@ class RagApiClient {
             body: jsonEncode({
               'question': question,
               'top_k': topK,
-              if (recentTopic != null && recentTopic.trim().isNotEmpty)
-                'recent_topic': recentTopic.trim(),
+              if (conversationContext?.toRequestJson() case final context?)
+                'conversation_context': context,
             }),
           )
           .timeout(const Duration(seconds: 90));

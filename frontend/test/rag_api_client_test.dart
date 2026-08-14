@@ -47,7 +47,7 @@ void main() {
     ).answer('Cách xin giấy xác nhận?');
 
     expect(result.answer, 'Bạn thực hiện theo hướng dẫn.');
-    expect(result.recentTopic, 'cách xin giấy xác nhận');
+    expect(result.conversationContext?.recentTopic, 'cách xin giấy xác nhận');
     expect(result.sources, hasLength(1));
     final source = result.sources.single;
     expect(source.documentKey, 'QT-SV-001');
@@ -62,19 +62,29 @@ void main() {
     expect(source.documentTypeLabel, 'Quyết định');
   });
 
-  test('sends recent topic with a follow-up question', () async {
+  test('sends structured conversation context with a follow-up question', () async {
     final client = MockClient((request) async {
       expect(jsonDecode(request.body), {
         'question': 'Hồ sơ gồm gì?',
         'top_k': 5,
-        'recent_topic': 'miễn học phí',
+        'conversation_context': {
+          'recent_topic': 'miễn học phí',
+          'document_key': 'ctu-pdt-mien-hoc-phi',
+          'version_key': 'ctu-pdt-mien-hoc-phi-v1',
+          'used_chunk_keys': ['ctu-pdt-mien-hoc-phi-v1::c::0003'],
+        },
       });
 
       return http.Response(
         jsonEncode({
           'answer': 'Hồ sơ gồm...',
           'should_search': true,
-          'recent_topic': 'hồ sơ gồm gì cho miễn học phí',
+          'conversation_context': {
+            'recent_topic': 'hồ sơ gồm gì cho miễn học phí',
+            'document_key': 'ctu-pdt-mien-hoc-phi',
+            'version_key': 'ctu-pdt-mien-hoc-phi-v1',
+            'used_chunk_keys': ['ctu-pdt-mien-hoc-phi-v1::c::0004'],
+          },
           'citations': [],
         }),
         200,
@@ -84,9 +94,20 @@ void main() {
 
     final result = await RagApiClient(
       client: client,
-    ).answer('Hồ sơ gồm gì?', recentTopic: 'miễn học phí');
+    ).answer(
+      'Hồ sơ gồm gì?',
+      conversationContext: const ConversationContext(
+        recentTopic: 'miễn học phí',
+        documentKey: 'ctu-pdt-mien-hoc-phi',
+        versionKey: 'ctu-pdt-mien-hoc-phi-v1',
+        usedChunkKeys: ['ctu-pdt-mien-hoc-phi-v1::c::0003'],
+      ),
+    );
 
-    expect(result.recentTopic, 'hồ sơ gồm gì cho miễn học phí');
+    expect(
+      result.conversationContext?.recentTopic,
+      'hồ sơ gồm gì cho miễn học phí',
+    );
   });
 
   test('shows "Chưa cập nhật" when document metadata is missing', () async {
