@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
@@ -69,51 +70,83 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
 
-    if (!_speechInitialized) {
-      _speechInitialized = await _speech.initialize(
-        onStatus: _onSpeechStatus,
-        onError: (error) {
-          if (!mounted) return;
-          setState(() => _isListening = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Không thể nhận dạng giọng nói: ${error.errorMsg}'),
-            ),
-          );
-        },
-      );
-    }
+    if (!_hasSecureSpeechContext()) return;
 
-    if (!_speechInitialized) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Thiết bị chưa hỗ trợ hoặc chưa cấp quyền micro.'),
+    try {
+      if (!_speechInitialized) {
+        _speechInitialized = await _speech.initialize(
+          onStatus: _onSpeechStatus,
+          onError: (error) => _showSpeechError(error.errorMsg),
+        );
+      }
+
+      if (!_speechInitialized) {
+        _showSpeechError('speech_not_supported');
+        return;
+      }
+
+      final vietnameseLocale = await _getVietnameseLocale();
+      _textBeforeListening = _inputController.text.trimRight();
+      await _speech.listen(
+        onResult: _onSpeechResult,
+        listenOptions: SpeechListenOptions(
+          localeId: vietnameseLocale,
+          partialResults: true,
+          cancelOnError: true,
+          listenMode: ListenMode.dictation,
         ),
       );
-      return;
+      if (mounted) setState(() => _isListening = _speech.isListening);
+    } catch (error) {
+      _showSpeechError(error.toString());
     }
+  }
+
+  Future<String?> _getVietnameseLocale() async {
+    // speech_to_text Web chỉ trả locale hiện tại của Chrome. Nếu Chrome đang
+    // dùng English, tìm trong locales() sẽ thất bại và Web Speech API tự rơi
+    // về tiếng Anh. Web Speech API nhận trực tiếp BCP-47 nên ép vi-VN ở đây.
+    if (kIsWeb) return 'vi-VN';
 
     final locales = await _speech.locales();
-    String? vietnameseLocale;
     for (final locale in locales) {
       if (locale.localeId.toLowerCase().startsWith('vi')) {
-        vietnameseLocale = locale.localeId;
-        break;
+        return locale.localeId;
       }
     }
+    return null;
+  }
 
-    _textBeforeListening = _inputController.text.trimRight();
-    await _speech.listen(
-      onResult: _onSpeechResult,
-      listenOptions: SpeechListenOptions(
-        localeId: vietnameseLocale,
-        partialResults: true,
-        cancelOnError: true,
-        listenMode: ListenMode.dictation,
-      ),
-    );
-    if (mounted) setState(() => _isListening = _speech.isListening);
+  bool _hasSecureSpeechContext() {
+    if (!kIsWeb ||
+        Uri.base.scheme == 'https' ||
+        {'localhost', '127.0.0.1'}.contains(Uri.base.host)) {
+      return true;
+    }
+    _showSpeechError('insecure_context');
+    return false;
+  }
+
+  void _showSpeechError(String error) {
+    if (!mounted) return;
+    setState(() => _isListening = false);
+    final normalized = error.toLowerCase().replaceAll('_', '-');
+    final message = switch (normalized) {
+      'not-allowed' || 'service-not-allowed' =>
+        'Chrome chưa được cấp quyền micro. Hãy cho phép Microphone rồi thử lại.',
+      'audio-capture' => 'Không tìm thấy micro đang hoạt động.',
+      'network' =>
+        'Chrome không kết nối được dịch vụ nhận dạng giọng nói. Hãy kiểm tra mạng.',
+      'no-speech' => 'Chưa nghe thấy giọng nói. Hãy thử nói lại gần micro hơn.',
+      'speech-not-supported' =>
+        'Trình duyệt hoặc thiết bị này chưa hỗ trợ nhận dạng giọng nói.',
+      'insecure-context' =>
+        'Nhận dạng giọng nói trên Web cần HTTPS hoặc chạy bằng localhost.',
+      _ => 'Không thể nhận dạng giọng nói: $error',
+    };
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _onSpeechResult(SpeechRecognitionResult result) {
@@ -176,7 +209,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ),
           _InputBar(
             controller: _inputController,
-            isResponding: ref.read(chatControllerProvider.notifier).isResponding,
+            isResponding: ref
+                .read(chatControllerProvider.notifier)
+                .isResponding,
             onSendOrStop: _sendOrStop,
             onMicPressed: _toggleListening,
             enabled: !isSending,
