@@ -60,8 +60,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _stopListening() async {
-    await _speech.stop();
-    if (mounted) setState(() => _isListening = false);
+    await _speech.cancel();
+    _textBeforeListening = '';
+
+    if (mounted) {
+      setState(() => _isListening = false);
+    }
   }
 
   Future<void> _toggleListening() async {
@@ -86,11 +90,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
 
       final vietnameseLocale = await _getVietnameseLocale();
-      _textBeforeListening = _inputController.text.trimRight();
+      // Mỗi lần bắt đầu bật mic mới thì xóa nội dung cũ
+      _inputController.clear();
+      _textBeforeListening = '';
+
       await _speech.listen(
         onResult: _onSpeechResult,
+        localeId: vietnameseLocale,
         listenOptions: SpeechListenOptions(
-          localeId: vietnameseLocale,
           partialResults: true,
           cancelOnError: true,
           listenMode: ListenMode.dictation,
@@ -103,22 +110,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<String?> _getVietnameseLocale() async {
-    // speech_to_text Web chỉ trả locale hiện tại của Chrome. Nếu Chrome đang
-    // dùng English, tìm trong locales() sẽ thất bại và Web Speech API tự rơi
-    // về tiếng Anh. Web Speech API nhận trực tiếp BCP-47 nên ép vi-VN ở đây.
-    if (kIsWeb) return 'vi-VN';
+  if (kIsWeb) return 'vi-VN';
 
-    final locales = await _speech.locales();
-    for (final locale in locales) {
-      if (locale.localeId.toLowerCase().startsWith('vi')) {
-        return locale.localeId;
-      }
+  final locales = await _speech.locales();
+
+  for (final locale in locales) {
+    final id = locale.localeId.toLowerCase().replaceAll('_', '-');
+
+    if (id == 'vi-vn' || id.startsWith('vi')) {
+      return locale.localeId;
     }
-    return null;
+  }
+  return 'vi-VN';
   }
 
   bool _hasSecureSpeechContext() {
-    if (!kIsWeb ||
+    if (!kIsWeb ||  
         Uri.base.scheme == 'https' ||
         {'localhost', '127.0.0.1'}.contains(Uri.base.host)) {
       return true;
